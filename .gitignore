@@ -1,0 +1,5 @@
+# Binary and transient files
+a.out
+core.*
+*.o
+*.out
