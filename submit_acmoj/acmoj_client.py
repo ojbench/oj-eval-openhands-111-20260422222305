@@ -87,7 +87,21 @@ class ACMOJClient:
             print(f"⚠️ Warning: Failed to save submission ID: {e}")
 
     def submit_git(self, problem_id: int, git_url: str) -> Optional[Dict]:
-        data = {"language": "git", "code": git_url}
+        # Enhancement: allow passing file content via special syntax.
+        # If git_url is of the form FILE:<path>, read file contents and submit as code
+        # If git_url is '-', read default src.hpp from current directory
+        if git_url == '-' or git_url.startswith('FILE:'):
+            file_path = 'src.hpp' if git_url == '-' else git_url.split(':', 1)[1]
+            try:
+                with open(file_path, 'r') as f:
+                    code = f.read()
+                # Use cpp language when direct file content is provided
+                data = {"language": "cpp", "code": code}
+            except Exception as e:
+                print(f"Failed to read file {file_path}: {e}")
+                return None
+        else:
+            data = {"language": "git", "code": git_url}
         result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
         if result and 'id' in result:
             self._save_submission_id(result['id'])
