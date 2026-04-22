@@ -42,7 +42,6 @@ class ACMOJClient:
         }
 
         self.submission_log_file = '/workspace/submission_ids.log'
-        
 
     def _make_request(self, method: str, endpoint: str, data: Dict[str, Any] = None, 
                      params: Dict[str, Any] = None) -> Optional[Dict]:
@@ -92,7 +91,19 @@ class ACMOJClient:
         result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
         if result and 'id' in result:
             self._save_submission_id(result['id'])
+        return result
 
+    def submit_file(self, problem_id: int, file_path: str, language: str = "cpp") -> Optional[Dict]:
+        try:
+            with open(file_path, 'r') as f:
+                code = f.read()
+        except Exception as e:
+            print(f"Failed to read file {file_path}: {e}")
+            return None
+        data = {"language": language, "code": code}
+        result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
+        if result and 'id' in result:
+            self._save_submission_id(result['id'])
         return result
 
     def get_submission_detail(self, submission_id: int) -> Optional[Dict]:
@@ -114,6 +125,12 @@ def main():
     submit_parser.add_argument("--problem-id", type=int, required=True, help="Problem ID")
     submit_parser.add_argument("--git-url", type=str, required=True, help="Git repository URL")
 
+    # File submission sub-command
+    submit_file_parser = subparsers.add_parser("submit-file", help="Submit code from a local file (contents will be uploaded)")
+    submit_file_parser.add_argument("--problem-id", type=int, required=True, help="Problem ID")
+    submit_file_parser.add_argument("--file", type=str, required=True, help="Path to code file to upload (e.g., src.hpp)")
+    submit_file_parser.add_argument("--language", type=str, default="cpp", help="Language identifier (default: cpp)")
+
     # Sub-command for checking submission status
     status_parser = subparsers.add_parser("status", help="Check submission status")
     status_parser.add_argument("--submission-id", type=int, required=True, help="Submission ID")
@@ -132,6 +149,8 @@ def main():
 
     if args.command == "submit":
         result = client.submit_git(args.problem_id, args.git_url)
+    elif args.command == "submit-file":
+        result = client.submit_file(args.problem_id, args.file, args.language)
     elif args.command == "status":
         result = client.get_submission_detail(args.submission_id)
     elif args.command == "abort":
